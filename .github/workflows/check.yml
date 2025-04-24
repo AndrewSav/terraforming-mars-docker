@@ -1,0 +1,30 @@
+name: Check latest version
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  version_check:
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+      - name: Get the latest version
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          curl -sLH "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/terraforming-mars/terraforming-mars/commits | tee json
+          cat json | jq -r "first | .sha" > sha
+          export TM_SHA=$(cat sha)
+          echo "TM_SHA=$TM_SHA" >> $GITHUB_ENV
+          rm json
+      - name: Add & Commit
+        uses: EndBug/add-and-commit@v9.1.4
+        with:
+          message: 'Automated commit update to: ${{ env.TM_SHA }}'
